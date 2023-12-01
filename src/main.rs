@@ -1,18 +1,44 @@
-use axum::{http::StatusCode, routing::get, Router};
+use axum::{routing::get, Router};
+use cch23_dhconnelly::*;
 
 async fn hello_world() -> &'static str {
     "Hello, world!"
 }
 
-async fn internal_error() -> StatusCode {
-    StatusCode::INTERNAL_SERVER_ERROR
+fn router() -> Router {
+    Router::new().route("/", get(hello_world)).nest("/-1", day_neg1::router())
 }
 
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
-    let router = Router::new()
-        .route("/", get(hello_world))
-        .route("/-1/error", get(internal_error));
+    Ok(router().into())
+}
 
-    Ok(router.into())
+#[cfg(test)]
+mod test {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test() {
+        let app = router();
+        let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_nesting() {
+        let app = router()
+            .nest("/hello", Router::new().route("/world", get(hello_world)));
+        let req =
+            Request::builder().uri("/hello/world").body(Body::empty()).unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
 }
