@@ -1,14 +1,9 @@
-use axum::{extract::Path, http::StatusCode, routing::get, Router};
+use crate::extractors::PathVec;
+use axum::{http::StatusCode, routing::get, Router};
 
-async fn part1(Path(nums): Path<String>) -> Result<String, StatusCode> {
-    let nums = nums
-        .split('/')
-        .map(|num| i64::from_str_radix(num, 10))
-        .collect::<Result<Vec<i64>, _>>()
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    let xor =
-        nums.into_iter().reduce(|x, y| x ^ y).ok_or(StatusCode::BAD_REQUEST)?;
-    Ok(xor.pow(3).to_string())
+async fn part1(PathVec(nums): PathVec<i64>) -> Result<String, StatusCode> {
+    let answer = nums.into_iter().reduce(|x, y| x ^ y).unwrap_or(0).pow(3);
+    Ok(answer.to_string())
 }
 
 pub fn router() -> Router {
@@ -26,8 +21,10 @@ mod test {
         let app = router();
         let req = Request::builder().uri(uri).body(Body::empty()).unwrap();
         let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
         let data = res.into_body().collect().await.unwrap().to_bytes();
         let answer = String::from_utf8(data.to_vec()).unwrap();
+        println!("{}", answer);
         i64::from_str_radix(&answer, 10).unwrap()
     }
 
