@@ -6,7 +6,10 @@ async fn hello_world() -> &'static str {
 }
 
 fn router() -> Router {
-    Router::new().route("/", get(hello_world)).nest("/-1", day_neg1::router())
+    Router::new()
+        .route("/", get(hello_world))
+        .nest("/-1", day_neg1::router())
+        .nest("/1", day1::router())
 }
 
 #[shuttle_runtime::main]
